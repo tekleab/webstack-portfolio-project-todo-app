@@ -12,7 +12,7 @@ export const Database = new DataSource({
 	password: process.env.DB_PASSWORD || 'todo',
 	database: process.env.DB_NAME || 'todo',
 	host: 'localhost',
-	port: 3306,
+	port: Number(process.env.DB_PORT || 3306),
 	entities: [ ApiKey, User, UserSession, Todo ],
 	synchronize: true,
 	dropSchema: false,

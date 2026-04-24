@@ -39,6 +39,7 @@ The backend service needs the following environment variables set on the server:
 - `DB_USER`
 - `DB_PASSWORD`
 - `DB_NAME`
+- `DB_PORT` (optional, default `3306`)
 - `FRONTEND_API_KEY` (optional)
 
 You can export these variables in the shell or configure them via a process manager like PM2.
@@ -47,19 +48,22 @@ For example:
 export DB_USER=mydbuser
 export DB_PASSWORD=mydbpassword
 export DB_NAME=todo_app
+export DB_PORT=3307
 export FRONTEND_API_KEY=front-end-api-key
 ```
 
-If Docker is used for MySQL, use a command like:
+If Docker is used for MySQL and port `3306` is unavailable, use a different host port:
 ```bash
 docker run -d --name todo-mysql \
   -e MYSQL_ROOT_PASSWORD=rootpass \
-  -e MYSQL_DATABASE=todo_app \
-  -e MYSQL_USER=mydbuser \
-  -e MYSQL_PASSWORD=mydbpassword \
-  -p 3306:3306 \
+  -e MYSQL_DATABASE=todo \
+  -e MYSQL_USER=todo \
+  -e MYSQL_PASSWORD=todo \
+  -p 3307:3306 \
   mysql:8
 ```
+
+Then set `DB_PORT=3307` for the backend.
 
 ## Manual Deployment Steps
 From the `/home/dev/project/todo-app` directory:
