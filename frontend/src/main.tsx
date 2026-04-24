@@ -13,7 +13,7 @@ import Home from './home'
 
 
 const axios = Axios.create({
-  baseURL: `http://${window.location.hostname}:3000`,
+  baseURL: '', // Use relative paths so it works with Nginx proxy
   headers: {
     Authorization: `Bearer ${generateHeader()}`
   }
