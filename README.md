@@ -54,5 +54,6 @@ A simple to-do application that allows users to create and delete tasks.
 See individual service READMEs for setup instructions:
 - [Backend](./backend/README.md)
 - [Frontend](./frontend/README.md)
+- [Deployment Guide](./DEPLOYMENT.md)
 
 > **Note:** Start the backend service first, as the frontend depends on it.
