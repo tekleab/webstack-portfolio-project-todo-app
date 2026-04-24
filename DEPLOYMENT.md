@@ -1,151 +1,93 @@
-# Deployment Guide
+# 🚀 Todo App: CI/CD & Deployment Documentation
 
-## Overview
-This repository contains a backend service (`backend/`) and a frontend service (`frontend/`). The CI/CD pipeline deploys the application to a Linux server using GitHub Actions and `pm2`.
+This document outlines the professional deployment architecture for the **Todo App**, a full-stack application featuring a React frontend and Node.js/Express backend.
 
-## Server Setup
-1. SSH into the server.
-2. Update packages:
-   ```bash
-   sudo apt update
-   ```
-3. Install Node.js 18 and npm:
-   ```bash
-   curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-   sudo apt-get install -y nodejs
-   ```
-4. Install PM2 and Git:
-   ```bash
-   sudo npm install -g pm2
-   sudo apt install git -y
-   ```
-5. Create the app directory and set ownership:
-   ```bash
-   sudo mkdir -p /home/dev/project/todo-app
-   sudo chown $USER:$USER /home/dev/project/todo-app
-   ```
-6. Clone the repository:
-   ```bash
-   cd /home/dev/project/todo-app
-   git clone https://github.com/YOUR_USERNAME/webstack-portfolio-project-todo-app .
-   ```
-7. Make the deploy script executable:
-   ```bash
-   chmod +x deploy.sh
-   ```
+---
 
-## Environment Variables
-The backend service needs these environment variables set on the server:
-- `DB_HOST` (optional, default `localhost`)
-- `DB_USER`
-- `DB_PASSWORD`
-- `DB_NAME`
-- `DB_PORT` (optional, default `3306`)
-- `FRONTEND_API_KEY` (optional)
+## 🏗 System Architecture
 
-Set them in the shell or via PM2 environment configuration:
-```bash
-export DB_HOST=127.0.0.1
-export DB_USER=mydbuser
-export DB_PASSWORD=mydbpassword
-export DB_NAME=todo_app
-export DB_PORT=3307
-export FRONTEND_API_KEY=front-end-api-key
+The application is deployed using a modern "Pull-Based" CI/CD strategy.
+
+```mermaid
+graph TD
+    A[Tekleab - Developer] -->|Push Code| B[GitHub Repository]
+    B -->|Trigger Workflow| C[GitHub Actions]
+    C -->|SSH & Execute Script| D[Linux Server]
+    D -->|Git Pull| E[App Source]
+    E -->|Build & PM2 Restart| F[Backend API :3000]
+    E -->|Build Static Files| G[Frontend Dist]
+    H[User Browser] -->|HTTP :80| I[Nginx Reverse Proxy]
+    I -->|Serve Static| G
+    I -->|Proxy /api Requests| F
 ```
 
-If Docker is used for MySQL and port `3306` is unavailable, use another host port:
+---
+
+## 🛠 Prerequisites & Server Prep
+
+### 1. System Dependencies
+The following core technologies were installed on the server:
+- **Node.js 18.x**: Runtime for backend and build tools.
+- **PM2**: Production process manager for Node.js.
+- **Git**: For source control management.
+- **Nginx**: High-performance reverse proxy.
+
+### 2. Database Layer
+The app requires a MySQL database. For quick setup, we can use a local MySQL instance or a Docker container:
 ```bash
 docker run -d --name todo-mysql \
-  -e MYSQL_ROOT_PASSWORD=rootpass \
-  -e MYSQL_DATABASE=todo \
-  -e MYSQL_USER=todo \
-  -e MYSQL_PASSWORD=todo \
-  -p 3308:3306 \
+  -e MYSQL_ROOT_PASSWORD=yourpassword \
+  -p 3306:3306 \
   mysql:8
 ```
-Then set `DB_HOST=127.0.0.1` and `DB_PORT=3308` for the backend.
 
-## Manual Deployment Steps
-From the `/home/dev/project/todo-app` directory:
-```bash
-cd /home/dev/project/todo-app
-bash deploy.sh
-```
+---
 
-If you need to restart the backend:
-```bash
-pm2 restart todo-backend
-```
+## 🔗 CI/CD Pipeline Flow
 
-## CI/CD Pipeline
-A GitHub Actions workflow is configured in `.github/workflows/deploy.yml`.
+The automation is handled via `.github/workflows/deploy.yml`. 
 
-### How it works
-- Trigger: push to `main`
-- Action: SSH into the Linux server
-- Commands executed on the server:
-  - `cd /home/dev/project/todo-app`
-  - `bash deploy.sh`
+### Key Features:
+- **Automated Deploy**: Every push to the `main` branch triggers an instant update.
+- **Secure Credentials**: Sensitive info (IP, SSH Keys) is stored securely in **GitHub Secrets**.
+- **Self-Healing Script**: The `deploy.sh` script automatically performs clean installs and restarts the backend via PM2.
 
-The deployment script performs:
-- `git pull origin main`
-- `npm install` and `npm run build` for the backend
-- `pm2 restart todo-backend || pm2 start dist/index.js --name todo-backend`
-- `npm install` and `npm run build` for the frontend
+### Required Secrets:
+| Secret Name | Description |
+| :--- | :--- |
+| `SERVER_HOST` | Remote server IP address (e.g., 196.188.187.153) |
+| `SERVER_USER` | SSH Username (e.g., dev) |
+| `SERVER_SSH_KEY` | Private key for passwordless login |
+| `SERVER_PASSWORD` | Fallback SSH password |
 
-### Required GitHub Secrets
-Add these secrets in repository settings:
-- `SERVER_HOST` - server IP or hostname
-- `SERVER_USER` - SSH username
-- `SERVER_SSH_KEY` - SSH private key for `SERVER_USER` (optional if using password)
-- `SERVER_PASSWORD` - SSH password for `SERVER_USER` (optional if using SSH key)
+---
 
-> If you want to deploy with password authentication instead of SSH key, set `SERVER_PASSWORD` and leave `SERVER_SSH_KEY` empty.
+## 🌐 Nginx Reverse Proxy Configuration
 
-## Optional Nginx / Domain Setup
-If you want to expose the app on a domain, install and configure Nginx:
-```bash
-sudo apt install nginx -y
-sudo systemctl start nginx
-sudo systemctl enable nginx
-```
-Create `/etc/nginx/sites-available/todo-app` with:
+Nginx is configured to serve the frontend dist folder while proxying `/api` calls to the local Node.js process.
+
+**Configuration Snippet:**
 ```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
+location / {
+    try_files $uri $uri/ /index.html; # React Router support
+}
 
-    root /home/dev/project/todo-app/frontend/dist;
-    index index.html;
-
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    location /api/ {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-    }
+location /api/ {
+    proxy_pass http://localhost:3000; # Pass to Node.js Backend
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
 }
 ```
-Enable the site and reload Nginx:
-```bash
-sudo ln -s /etc/nginx/sites-available/todo-app /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl reload nginx
-```
 
-> Note: frontend build output is generated at `/home/dev/project/todo-app/frontend/dist` by `npm run build`.
+---
 
-## Troubleshooting
-- If the workflow fails, check GitHub Actions logs and verify SSH secrets.
-- If deployment fails on the server, confirm `/home/dev/project/todo-app` contains the repo and `pm2` can launch `dist/index.js`.
-- Use `pm2 logs todo-backend` to inspect runtime errors.
-- Use `sudo nginx -t` to validate Nginx configuration.
+## 🩺 Troubleshooting & Maintenance
+
+- **View Logs**: `pm2 logs todo-backend`
+- **Check Status**: `pm2 status`
+- **Verify Nginx**: `sudo nginx -t`
+- **Environment Variables**: Ensure `.env` is configured correctly in `/home/dev/project/todo-app/backend/`.
+
+---
+
+**Developed & Deployed by Tekleab.**

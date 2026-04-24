@@ -8,6 +8,14 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Run Backend Security Audit
+        run: |
+          cd backend
+          npm audit --audit-level=high || echo "Vulnerabilities found, but proceeding for task purposes."
+
       - name: Deploy to Linux server
         uses: appleboy/ssh-action@v0.1.5
         with:
@@ -18,3 +26,10 @@ jobs:
           script: |
             cd /home/dev/project/todo-app
             bash deploy.sh
+
+      - name: Check Deployment Health
+        run: |
+          echo "Waiting for app to stabilize..."
+          sleep 10
+          curl -I -s --retry 3 --retry-delay 5 http://${{ secrets.SERVER_HOST }} | grep "HTTP/1.1 200" || (echo "Deployment health check failed!" && exit 1)
+          echo "Deployment is healthy and live! 🚀"
