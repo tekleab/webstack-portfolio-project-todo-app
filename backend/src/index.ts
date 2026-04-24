@@ -32,12 +32,24 @@ app.use(errorHandler)
 routes.push(new UserRoute(app))
 routes.push(new TodoRoute(app))
 
+const port = Number(process.env.PORT || 3000)
+const server = createServer(app)
+
+server.on('error', err => {
+	if (err && (err as NodeJS.ErrnoException).code === 'EADDRINUSE') {
+		logger.error(`Port ${port} is already in use`)
+	} else {
+		logger.error('server error')
+		logger.error(err.toString())
+	}
+	process.exit(1)
+})
 
 Database.initialize()
 	.then(async () => {
 		logger.info('database connected')
-		server.listen(3000, () => {
-			logger.info('server started')
+		server.listen(port, () => {
+			logger.info(`server started on port ${port}`)
 			routes.forEach(route => {
 				logger.info(`${route.getName()} configured`)
 			})
@@ -58,6 +70,3 @@ Database.initialize()
 		logger.error('database conneciton failed')
 		logger.error(err.toString())
 	})
-
-
-const server = createServer(app)

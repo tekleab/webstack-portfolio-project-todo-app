@@ -1,7 +1,7 @@
 # Deployment Guide
 
 ## Overview
-This repository contains a backend service (`backend/`) and a frontend service (`frontend/`). The CI/CD pipeline below deploys the backend service to a Linux server using GitHub Actions and `pm2`.
+This repository contains a backend service (`backend/`) and a frontend service (`frontend/`). The CI/CD pipeline deploys the application to a Linux server using GitHub Actions and `pm2`.
 
 ## Server Setup
 1. SSH into the server.
@@ -35,7 +35,7 @@ This repository contains a backend service (`backend/`) and a frontend service (
    ```
 
 ## Environment Variables
-The backend service needs the following environment variables set on the server:
+The backend service needs these environment variables set on the server:
 - `DB_HOST` (optional, default `localhost`)
 - `DB_USER`
 - `DB_PASSWORD`
@@ -43,8 +43,7 @@ The backend service needs the following environment variables set on the server:
 - `DB_PORT` (optional, default `3306`)
 - `FRONTEND_API_KEY` (optional)
 
-You can export these variables in the shell or configure them via a process manager like PM2.
-For example:
+Set them in the shell or via PM2 environment configuration:
 ```bash
 export DB_HOST=127.0.0.1
 export DB_USER=mydbuser
@@ -54,7 +53,7 @@ export DB_PORT=3307
 export FRONTEND_API_KEY=front-end-api-key
 ```
 
-If Docker is used for MySQL and port `3306` is unavailable, use a different host port:
+If Docker is used for MySQL and port `3306` is unavailable, use another host port:
 ```bash
 docker run -d --name todo-mysql \
   -e MYSQL_ROOT_PASSWORD=rootpass \
@@ -64,7 +63,6 @@ docker run -d --name todo-mysql \
   -p 3308:3306 \
   mysql:8
 ```
-
 Then set `DB_HOST=127.0.0.1` and `DB_PORT=3308` for the backend.
 
 ## Manual Deployment Steps
@@ -74,7 +72,7 @@ cd /home/dev/project/todo-app
 bash deploy.sh
 ```
 
-If the app is already running:
+If you need to restart the backend:
 ```bash
 pm2 restart todo-backend
 ```
@@ -86,24 +84,26 @@ A GitHub Actions workflow is configured in `.github/workflows/deploy.yml`.
 - Trigger: push to `main`
 - Action: SSH into the Linux server
 - Commands executed on the server:
-  - `cd /var/www/todo-app`
-  - `git pull origin main`
-  - `cd backend`
-  - `npm install`
-  - `npm run build`
-  - `pm2 restart todo-backend || pm2 start dist/index.js --name todo-backend`
+  - `cd /home/dev/project/todo-app`
+  - `bash deploy.sh`
+
+The deployment script performs:
+- `git pull origin main`
+- `npm install` and `npm run build` for the backend
+- `pm2 restart todo-backend || pm2 start dist/index.js --name todo-backend`
+- `npm install` and `npm run build` for the frontend
 
 ### Required GitHub Secrets
-Add these secrets in the repository settings:
-- `SERVER_HOST` - server IP address or hostname
+Add these secrets in repository settings:
+- `SERVER_HOST` - server IP or hostname
 - `SERVER_USER` - SSH username
 - `SERVER_SSH_KEY` - SSH private key for `SERVER_USER` (optional if using password)
 - `SERVER_PASSWORD` - SSH password for `SERVER_USER` (optional if using SSH key)
 
-> If you want to deploy via GitHub Actions without an SSH key, set `SERVER_PASSWORD` and leave `SERVER_SSH_KEY` empty.
+> If you want to deploy with password authentication instead of SSH key, set `SERVER_PASSWORD` and leave `SERVER_SSH_KEY` empty.
 
 ## Optional Nginx / Domain Setup
-If you want to expose the frontend and backend through a domain, install and configure Nginx:
+If you want to expose the app on a domain, install and configure Nginx:
 ```bash
 sudo apt install nginx -y
 sudo systemctl start nginx
@@ -142,10 +142,10 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-> Note: the frontend build files are generated in `/home/dev/project/todo-app/frontend/dist` by `npm run build`.
+> Note: frontend build output is generated at `/home/dev/project/todo-app/frontend/dist` by `npm run build`.
 
 ## Troubleshooting
-- If the workflow fails, check GitHub Actions logs and ensure SSH secrets are correct.
-- If deployment fails on the server, verify that `/var/www/todo-app` contains the correct repository and that `pm2` can access `dist/index.js`.
+- If the workflow fails, check GitHub Actions logs and verify SSH secrets.
+- If deployment fails on the server, confirm `/home/dev/project/todo-app` contains the repo and `pm2` can launch `dist/index.js`.
 - Use `pm2 logs todo-backend` to inspect runtime errors.
 - Use `sudo nginx -t` to validate Nginx configuration.

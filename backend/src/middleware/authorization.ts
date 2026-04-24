@@ -11,24 +11,36 @@ export default async function (req: Request, res: Response, next: NextFunction) 
 	logger.debug('authorization')
 	const { authorization } = req.headers
 
-	const [bearer, string] = (authorization as string).split(' ')
+	if (!authorization || typeof authorization !== 'string') {
+		logger.debug('missing authorization header')
+		return unauthorized(res)
+	}
+
+	const [bearer, string] = authorization.split(' ')
 	if (!string) {
 		logger.debug('no auth string found')
 		return unauthorized(res)
 	}
 
-	const { "api-key": apiKey, "api-key-user": apiKeyUser, username, token } = JSON.parse(base64ToString(string))
+	let payload
+	try {
+		payload = JSON.parse(base64ToString(string))
+	} catch (error) {
+		logger.debug('invalid auth payload', error)
+		return unauthorized(res)
+	}
+
+	const { "api-key": apiKey, "api-key-user": apiKeyUser, username, token } = payload
 	if (!apiKey) {
 		logger.debug('no apiKey found')
 		return unauthorized(res)
 	}
 
 	const apiKeys = await ApiKeyRepository.findOneBy({ usedBy: apiKeyUser })
-	if (!apiKeys && !apiKey.compareTokenSync(apiKey)) {
+	if (!apiKeys || !apiKeys.compareTokenSync(apiKey)) {
 		logger.debug('no api key match found')
-		unauthorized(res)
+		return unauthorized(res)
 	}
-
 
 	res.locals.username = username
 	res.locals.token = token
