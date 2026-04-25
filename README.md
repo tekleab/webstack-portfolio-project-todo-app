@@ -1,5 +1,7 @@
 # ALX - Webstack - Portfolio Project
 
+![Build & Deploy Status](https://github.com/tekleab/webstack-portfolio-project-todo-app/actions/workflows/deploy.yml/badge.svg)
+
 A simple to-do application that allows users to create and delete tasks.
 
 **Author:** Biruk Ephrem

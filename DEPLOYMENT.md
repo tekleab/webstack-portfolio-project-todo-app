@@ -73,4 +73,23 @@ The frontend is configured to communicate directly with the backend using the se
 
 ---
 
+## ↩️ Rollback & Self-Healing
+
+### Instant Rollback
+A professional CI/CD pipeline needs a safety net. If a deployment causes an issue, you can roll back to the previous stable state instantly from the server:
+```bash
+# Revert the last commit and redeploy
+git revert HEAD --no-edit && bash deploy.sh
+```
+
+### Process Resilience (Self-Healing)
+The process manager (PM2) is configured to automatically restart the application services if they crash or if the server reboots. This ensures maximum uptime:
+```bash
+# To setup startup script on a fresh server
+pm2 startup
+pm2 save
+```
+
+---
+
 **Developed & Deployed by Tekleab.**

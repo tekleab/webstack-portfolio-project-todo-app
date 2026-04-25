@@ -5,7 +5,23 @@ on:
     branches: [ main ]
 
 jobs:
+  validate:
+    name: 🛡️ Security & Quality Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Build Check (Frontend)
+        run: cd frontend && npm install && npm run build
+      - name: Security Scan (Backend)
+        run: cd backend && npm audit --audit-level=high || true
+
   deploy:
+    name: 🚀 Automated Deployment
+    needs: validate
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -31,5 +47,5 @@ jobs:
         run: |
           echo "Waiting for app to stabilize..."
           sleep 10
-          curl -I -s --retry 3 --retry-delay 5 http://${{ secrets.SERVER_HOST }} | grep "HTTP/1.1 200" || (echo "Deployment health check failed!" && exit 1)
+          curl -I -s --retry 3 --retry-delay 5 http://${{ secrets.SERVER_HOST }}:8080 | grep "HTTP/1.1 200" || (echo "Deployment health check failed!" && exit 1)
           echo "Deployment is healthy and live! 🚀"
