@@ -21,4 +21,8 @@ cd ../frontend
 npm install
 npm run build
 
-echo "Deployment complete. Frontend built at frontend/dist"
+echo "Serving frontend via pm2 on port 8080..."
+pm2 restart todo-frontend || pm2 serve dist 8080 --spa --name todo-frontend
+pm2 save
+
+echo "Deployment complete. Frontend running on port 8080!"
